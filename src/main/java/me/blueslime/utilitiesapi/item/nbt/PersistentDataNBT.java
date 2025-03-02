@@ -24,7 +24,7 @@ public final class PersistentDataNBT {
         if (!isAvailable()) {
             return itemStack;
         }
-        return PERSISTENT_INSTANCE.set(itemStack, key, value);
+        return PERSISTENT_INSTANCE.set(itemStack, key.replace("-", ""), value);
     }
 
     public ItemStack set(@NotNull final ItemStack itemStack, final String key, final String value) {
@@ -32,7 +32,11 @@ public final class PersistentDataNBT {
         if (meta == null) {
             return itemStack;
         }
-        meta.getPersistentDataContainer().set(new NamespacedKey(plugin, key), PersistentDataType.STRING, value);
+        meta.getPersistentDataContainer().set(
+            new NamespacedKey(plugin, key.replace("-", "")),
+            PersistentDataType.STRING,
+            value
+        );
         itemStack.setItemMeta(meta);
         return itemStack;
     }
@@ -46,7 +50,7 @@ public final class PersistentDataNBT {
      */
     public ItemStack removeTag(ItemStack itemStack, String key) {
         if (isAvailable()) {
-            return PERSISTENT_INSTANCE.remove(itemStack, key);
+            return PERSISTENT_INSTANCE.remove(itemStack, key.replace("-", ""));
         }
         return itemStack;
     }
@@ -56,7 +60,7 @@ public final class PersistentDataNBT {
         if (meta == null) {
             return itemStack;
         }
-        meta.getPersistentDataContainer().remove(new NamespacedKey(plugin, key));
+        meta.getPersistentDataContainer().remove(new NamespacedKey(plugin, key.replace("-", "")));
         itemStack.setItemMeta(meta);
         return itemStack;
     }
@@ -72,7 +76,7 @@ public final class PersistentDataNBT {
         if (!isAvailable()) {
             return "";
         }
-        return PERSISTENT_INSTANCE.get(itemStack, key);
+        return PERSISTENT_INSTANCE.get(itemStack, key.replace("-", ""));
     }
 
     public String get(@NotNull final ItemStack itemStack, final String key) {
@@ -80,7 +84,10 @@ public final class PersistentDataNBT {
         if (meta == null) {
             return "";
         }
-        return meta.getPersistentDataContainer().get(new NamespacedKey(plugin, key), PersistentDataType.STRING);
+        return meta.getPersistentDataContainer().get(
+            new NamespacedKey(plugin, key.replace("-", "")),
+            PersistentDataType.STRING
+        );
     }
 
     public static void initialize(Plugin plugin) {
