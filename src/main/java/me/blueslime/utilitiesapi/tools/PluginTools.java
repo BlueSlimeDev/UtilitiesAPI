@@ -45,7 +45,7 @@ public class PluginTools {
             default:
                 String[] split = argument.replace(" ", "").split(",", 3);
                 if (split.length >= 3) {
-                    if (!isNumber(split[0]) || !isNumber(split[1]) || !isNumber(split[3])) {
+                    if (!isInteger(split[0]) || !isInteger(split[1]) || !isInteger(split[3])) {
                         return Color.WHITE;
                     }
                     return Color.fromRGB(
@@ -54,7 +54,7 @@ public class PluginTools {
                             Integer.parseInt(split[3])
                     );
                 } else if (split.length == 2) {
-                    if (!isNumber(split[0]) || !isNumber(split[1])) {
+                    if (!isInteger(split[0]) || !isInteger(split[1])) {
                         return Color.WHITE;
                     }
                     return Color.fromRGB(
@@ -63,7 +63,7 @@ public class PluginTools {
                             0
                     );
                 } else {
-                    if (!isNumber(split[0])) {
+                    if (!isInteger(split[0])) {
                         return Color.WHITE;
                     }
                     return Color.fromRGB(
@@ -75,7 +75,46 @@ public class PluginTools {
         }
     }
 
-    public static boolean isNumber(String value) {
+    public static int toInteger(String value, int defInt) {
+        if (isInteger(value)) {
+            return Integer.parseInt(value);
+        }
+        return defInt;
+    }
+
+    public static float toFloat(String value, float defFloat) {
+        if (isDouble(value)) {
+            return Float.parseFloat(value);
+        }
+        return defFloat;
+    }
+
+    public static double toDouble(String value, float defDouble) {
+        if (isDouble(value)) {
+            return Double.parseDouble(value);
+        }
+        return defDouble;
+    }
+
+    public static boolean isDouble(String value) {
+        try {
+            Double.parseDouble(value);
+            return true;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    public static boolean isFloat(String value) {
+        try {
+            Float.parseFloat(value);
+            return true;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    public static boolean isInteger(String value) {
         try {
             Integer.parseInt(value);
             return true;
@@ -83,6 +122,5 @@ public class PluginTools {
             return false;
         }
     }
-
 
 }
