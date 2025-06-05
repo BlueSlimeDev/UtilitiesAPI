@@ -3,9 +3,13 @@ package me.blueslime.utilitiesapi.item.nbt;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @SuppressWarnings("unused")
 public final class PersistentDataNBT {
@@ -39,6 +43,66 @@ public final class PersistentDataNBT {
         );
         itemStack.setItemMeta(meta);
         return itemStack;
+    }
+
+    public static List<String> getAll(@NotNull final ItemStack itemStack) {
+        return PERSISTENT_INSTANCE.obtain(itemStack);
+    }
+
+    public static ItemStack loadAll(@NotNull final ItemStack itemStack, List<String> dataList) {
+        return PERSISTENT_INSTANCE.load(itemStack, dataList);
+    }
+
+    public List<String> obtain(@NotNull final ItemStack itemStack) {
+        final ItemMeta meta = itemStack.getItemMeta();
+        if (meta == null) {
+            return new ArrayList<>();
+        }
+        List<String> list = new ArrayList<>();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        for (NamespacedKey key : container.getKeys()) {
+            if (container.has(key, PersistentDataType.STRING)) {
+                String value = container.get(key, PersistentDataType.STRING);
+                list.add(key.toString() + ";" + value); // Ej: "plugin:clave;valor"
+            }
+        }
+
+        return list;
+    }
+
+    @SuppressWarnings("deprecation")
+    public ItemStack load(@NotNull final ItemStack item, List<String> dataList) {
+        if (dataList == null || dataList.isEmpty()) {
+            return item;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return item;
+
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        for (String entry : dataList) {
+            String[] parts = entry.split(";", 2);
+            if (parts.length != 2) continue;
+
+            String keyString = parts[0];
+            String value = parts[1];
+
+            NamespacedKey key;
+            try {
+                String[] nsParts = keyString.split(":", 2);
+                if (nsParts.length != 2) continue;
+                key = new NamespacedKey(nsParts[0], nsParts[1]);
+            } catch (Exception e) {
+                continue;
+            }
+
+            container.set(key, PersistentDataType.STRING, value);
+        }
+
+        item.setItemMeta(meta);
+        return item;
     }
 
     /**

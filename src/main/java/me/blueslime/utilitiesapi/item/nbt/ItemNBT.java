@@ -1,6 +1,8 @@
 package me.blueslime.utilitiesapi.item.nbt;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import me.blueslime.nmshandlerapi.utils.presets.Presets;
 import me.blueslime.utilitiesapi.utils.consumer.PluginConsumer;
@@ -133,6 +135,20 @@ public class ItemNBT {
         );
     }
 
+    public static ItemStack loadAll(ItemStack itemStack, List<String> dataList) {
+        if (isNewVersion()) {
+            return PersistentDataNBT.loadAll(itemStack, dataList);
+        }
+        return itemStack;
+    }
+
+    public static List<String> getAll(ItemStack itemStack) {
+        if (isNewVersion()) {
+            return PersistentDataNBT.getAll(itemStack);
+        }
+        return new ArrayList<>();
+    }
+
     public ItemStack setString(ItemStack stack, String k, String v) {
         if (isVersionIncompatible()) {
             return PersistentDataNBT.setString(stack, k, v);
@@ -197,6 +213,10 @@ public class ItemNBT {
             return "";
         }
         return val;
+    }
+
+    public static boolean isNewVersion() {
+        return getInstance().isVersionIncompatible();
     }
 
     private boolean isSpecified(String version) {

@@ -14,6 +14,7 @@ import me.blueslime.utilitiesapi.tools.PluginTools;
 import me.blueslime.utilitiesapi.utils.skulls.SkullExecutable;
 import me.blueslime.utilitiesapi.utils.skulls.SkullReflection;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -22,6 +23,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkEffectMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.lang.reflect.Field;
@@ -174,6 +176,26 @@ public class ItemWrapper implements Cloneable {
         checkItem();
 
         if (nbts != null) {
+            for (String nbt : nbts) {
+                String[] split = nbt.split(",", 2);
+
+                String value = split[1];
+                String key = split[0];
+
+                item = ItemNBT.addString(
+                        item,
+                        key,
+                        value
+                );
+            }
+        }
+        return this;
+    }
+
+    public ItemWrapper addStringNBT(List<String> nbts) {
+        checkItem();
+
+        if (nbts != null && !nbts.isEmpty()) {
             for (String nbt : nbts) {
                 String[] split = nbt.split(",", 2);
 
@@ -488,12 +510,103 @@ public class ItemWrapper implements Cloneable {
             configuration.getStringList("lore"),
             configuration.getStringList("enchantments")
         );
+        if (configuration.contains("nbts")) {
+            wrapper.addStringNBT(configuration.getStringList("nbts"));
+        }
         if (configuration.contains("charge-color")) {
             wrapper.setChargeMeta(
                     configuration.getString("charge-color", "red")
             );
         }
+        if (configuration.contains("armor-color")) {
+            wrapper.setArmorMeta(
+                configuration.getString("armor-color", "0, 0, 0")
+            );
+        }
         return wrapper;
+    }
+
+    private void setArmorMeta(String string) {
+        checkItem();
+
+        if (item.getItemMeta() instanceof LeatherArmorMeta) {
+            LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
+
+            String[] split = string.replace(" ", "").split(",");
+
+            int red;
+            int green = 0;
+            int blue = 0;
+
+            if (split.length < 3) {
+                if (split.length < 2) {
+                    red = PluginTools.toInteger(split[0], 0);
+                } else {
+                    red = PluginTools.toInteger(split[0], 0);
+                    green = PluginTools.toInteger(split[1], 0);
+                }
+            } else {
+                red = PluginTools.toInteger(split[0], 0);
+                green = PluginTools.toInteger(split[1], 0);
+                blue = PluginTools.toInteger(split[2], 0);
+            }
+
+            meta.setColor(Color.fromRGB(
+                red,
+                green,
+                blue
+            ));
+        }
+    }
+
+    public void saveAt(ConfigurationSection section) {
+        checkItem();
+
+        ItemStack itemStack = getItem();
+
+        section.set("material", itemStack.getType().toString().toUpperCase(Locale.ENGLISH));
+        section.set("amount", itemStack.getAmount());
+
+        ItemMeta meta = itemStack.getItemMeta();
+
+        section.set(
+            "name",
+            meta == null
+                ? itemStack.getType().toString().toUpperCase(Locale.ENGLISH)
+                : meta.getDisplayName()
+        );
+
+        section.set(
+            "lore",
+            meta == null || meta.getLore() == null
+                ? new ArrayList<>()
+                : new ArrayList<>(meta.getLore())
+        );
+
+        section.set(
+            "enchantments",
+            meta == null || meta.getEnchants().isEmpty()
+                ? new ArrayList<>()
+                : meta.getEnchants().entrySet().stream()
+                    .map(v -> v.getKey().getName() + "," + v.getValue())
+                    .collect(Collectors.toList())
+        );
+
+        section.set(
+            "nbts",
+            ItemNBT.getAll(itemStack)
+        );
+
+        if (meta instanceof LeatherArmorMeta) {
+            LeatherArmorMeta leatherArmorMeta = (LeatherArmorMeta) meta;
+
+            section.set(
+                "armor-color",
+                leatherArmorMeta.getColor().getRed() + ", " +
+                leatherArmorMeta.getColor().getGreen() + ", " +
+                leatherArmorMeta.getColor().getBlue()
+            );
+        }
     }
 
     private void setChargeMeta(String value) {
