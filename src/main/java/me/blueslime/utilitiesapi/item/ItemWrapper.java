@@ -611,7 +611,7 @@ public class ItemWrapper implements Cloneable {
         }
     }
 
-    private void setArmorMeta(String string) {
+    public void setArmorMeta(String string) {
         checkItem();
 
         if (item.getItemMeta() instanceof LeatherArmorMeta meta) {
@@ -720,7 +720,7 @@ public class ItemWrapper implements Cloneable {
         }
     }
 
-    private void setChargeMeta(String value) {
+    public void setChargeMeta(String value) {
         checkItem();
 
         if (item.getItemMeta() instanceof FireworkEffectMeta meta) {
