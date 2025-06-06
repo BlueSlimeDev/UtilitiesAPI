@@ -11,6 +11,7 @@ import me.blueslime.utilitiesapi.item.dynamic.executor.FunctionExecutor;
 import me.blueslime.utilitiesapi.item.nbt.ItemNBT;
 import me.blueslime.utilitiesapi.text.TextUtilities;
 import me.blueslime.utilitiesapi.tools.PluginTools;
+import me.blueslime.utilitiesapi.utils.modern.ModernConversion;
 import me.blueslime.utilitiesapi.utils.skulls.SkullExecutable;
 import me.blueslime.utilitiesapi.utils.skulls.SkullReflection;
 import org.bukkit.Bukkit;
@@ -21,10 +22,8 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.FireworkEffectMeta;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.inventory.meta.*;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -523,15 +522,99 @@ public class ItemWrapper implements Cloneable {
                 configuration.getString("armor-color", "0, 0, 0")
             );
         }
+        if (configuration.contains("armor-trim.material")) {
+            wrapper.setArmorTrim(
+                configuration.getString("armor-trim.material", "DIAMOND"),
+                configuration.getString("armor-trim.pattern", "")
+            );
+        }
+        if (configuration.contains("unbreakable")) {
+            wrapper.setUnbreakable(
+                configuration.getBoolean("unbreakable", false)
+            );
+        }
+        if (configuration.contains("custom-model-data")) {
+            wrapper.setCustomModelData(
+                configuration.getInt("custom-model-data", 0)
+            );
+        }
+        if (configuration.contains("item-flags")) {
+            wrapper.setItemFlags(
+                configuration.getStringList("item-flags")
+            );
+        }
         return wrapper;
+    }
+
+    /**
+     * Sets the armor trim on the item.
+     * This method relies on Minecraft 1.20+ features.
+     *
+     * @param materialKey The NamespacedKey string for the trim material (e.g., "diamond").
+     * @param patternKey  The NamespacedKey string for the trim pattern (e.g., "coast").
+     */
+    public void setArmorTrim(String materialKey, String patternKey) {
+        // * Makes sure that the item exists at the ItemWrapper class
+        checkItem();
+        // * Armor trim converter
+        if (ItemNBT.isNewVersion()) {
+            ModernConversion.convertTrim(item, materialKey, patternKey);
+        }
+    }
+
+    /**
+     * Sets whether the item is unbreakable.
+     *
+     * @param unbreakable True to make the item unbreakable, false otherwise.
+     */
+    public void setUnbreakable(boolean unbreakable) {
+        // * Makes sure that the item exists at the ItemWrapper class
+        checkItem();
+        // Set unbreakable
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
+
+        meta.setUnbreakable(unbreakable);
+        item.setItemMeta(meta);
+    }
+
+    /**
+     * Sets the custom model data for the item.
+     *
+     * @param modelDataInt The integer value for the custom model data.
+     */
+    public void setCustomModelData(int modelDataInt) {
+        // * Makes sure that the item exists at the ItemWrapper class
+        checkItem();
+
+        if (ItemNBT.isNewVersion()) {
+            if (item == null || item.getType().isAir()) return;
+
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) return;
+
+            meta.setCustomModelData(modelDataInt);
+            item.setItemMeta(meta);
+        }
+    }
+
+    /**
+     * Sets the item flags for the item, hiding specific properties like enchantments, attributes, etc.
+     *
+     * @param stringList A list of strings, each representing an ItemFlag name (e.g., "HIDE_ENCHANTS").
+     */
+    public void setItemFlags(List<String> stringList) {
+        // * Makes sure that the item exists at the ItemWrapper class
+        checkItem();
+        if (ItemNBT.isNewVersion()) {
+            ModernConversion.convertFlags(item, stringList);
+        }
     }
 
     private void setArmorMeta(String string) {
         checkItem();
 
-        if (item.getItemMeta() instanceof LeatherArmorMeta) {
-            LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
-
+        if (item.getItemMeta() instanceof LeatherArmorMeta meta) {
             String[] split = string.replace(" ", "").split(",");
 
             int red;
@@ -573,7 +656,7 @@ public class ItemWrapper implements Cloneable {
             "name",
             meta == null
                 ? itemStack.getType().toString().toUpperCase(Locale.ENGLISH)
-                : meta.getDisplayName()
+                : meta.hasDisplayName() ? meta.getDisplayName() : null
         );
 
         section.set(
@@ -582,6 +665,10 @@ public class ItemWrapper implements Cloneable {
                 ? new ArrayList<>()
                 : new ArrayList<>(meta.getLore())
         );
+
+        if (meta != null && meta.isUnbreakable()) {
+            section.set("unbreakable", true);
+        }
 
         section.set(
             "enchantments",
@@ -597,9 +684,33 @@ public class ItemWrapper implements Cloneable {
             ItemNBT.getAll(itemStack)
         );
 
-        if (meta instanceof LeatherArmorMeta) {
-            LeatherArmorMeta leatherArmorMeta = (LeatherArmorMeta) meta;
+        if (meta != null && meta.hasCustomModelData()) {
+            section.set("custom-model-data", meta.getCustomModelData());
+        }
 
+        if (meta instanceof Damageable damageable) {
+            if (damageable.hasDamage()) {
+                section.set("damage", damageable.getDamage());
+            }
+        }
+
+        if (ItemNBT.isNewVersion()) {
+            if (meta instanceof ArmorTrim trim) {
+                section.set("armor-trim.material", trim.getMaterial().getKey().getKey());
+                section.set("armor-trim.pattern", trim.getPattern().getKey().getKey());
+            }
+        }
+
+        if (meta != null && !meta.getItemFlags().isEmpty()) {
+            section.set(
+                "item-flags",
+                meta.getItemFlags().stream()
+                    .map(Enum::name)
+                    .collect(Collectors.toList())
+            );
+        }
+
+        if (meta instanceof LeatherArmorMeta leatherArmorMeta) {
             section.set(
                 "armor-color",
                 leatherArmorMeta.getColor().getRed() + ", " +
@@ -612,9 +723,7 @@ public class ItemWrapper implements Cloneable {
     private void setChargeMeta(String value) {
         checkItem();
 
-        if (item.getItemMeta() instanceof FireworkEffectMeta) {
-            FireworkEffectMeta meta = (FireworkEffectMeta) item.getItemMeta();
-
+        if (item.getItemMeta() instanceof FireworkEffectMeta meta) {
             FireworkEffect.Builder builder = FireworkEffect.builder();
 
             String[] split = value.replace(" ", "").split(":", 4);
